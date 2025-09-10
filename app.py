@@ -526,4 +526,5 @@ def clinique():
     return render_template('clinique.html', exams=exams, users=users)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 10000))  # Render utilise le port 10000
+    app.run(host='0.0.0.0', port=port, debug=False)
