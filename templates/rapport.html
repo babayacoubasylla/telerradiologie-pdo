@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>📝 Rédiger le rapport</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #2c3e50; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        button { background: #27ae60; color: white; padding: 12px 30px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        button:hover { background: #229954; }
+        .flash-messages { margin-bottom: 20px; }
+        .flash-messages .success { color: #27ae60; background: #e8f5e9; padding: 10px; border-radius: 5px; }
+        .flash-messages .error { color: #e74c3c; background: #fadbd8; padding: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>📝 Rédiger le rapport</h2>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST">
+            <div class="form-group">
+                <label>Date de l'examen</label>
+                <input type="text" name="date_examen" value="{{ defaults.date_examen }}" required>
+            </div>
+            <div class="form-group">
+                <label>Âge du patient</label>
+                <input type="text" name="age" value="{{ defaults.age }}" required>
+            </div>
+            <div class="form-group">
+                <label>Examen demandé</label>
+                <input type="text" name="examen_demande" value="{{ defaults.examen_demande }}" required>
+            </div>
+            <div class="form-group">
+                <label>Technique</label>
+                <textarea name="technique" rows="4" required>{{ defaults.technique }}</textarea>
+            </div>
+            <div class="form-group">
+                <label>Résultat</label>
+                <textarea name="resultat" rows="6" required>{{ defaults.resultat }}</textarea>
+            </div>
+            <div class="form-group">
+                <label>Conclusion</label>
+                <textarea name="conclusion" rows="4" required>{{ defaults.conclusion }}</textarea>
+            </div>
+            <button type="submit">✅ Générer le rapport</button>
+        </form>
+    </div>
+</body>
+</html>

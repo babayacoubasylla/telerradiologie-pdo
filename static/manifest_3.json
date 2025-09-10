@@ -1,0 +1,28 @@
+{
+  "studies": [
+    {
+      "studyInstanceUID": "Study.3",
+      "studyDescription": "Examen #3 - KOUASSI as",
+      "studyDate": "20250910",
+      "studyTime": "035322",
+      "patientName": "KOUASSI^as",
+      "patientId": "P20250909-34489872",
+      "seriesList": [
+        {
+          "seriesInstanceUID": "Series.3.1",
+          "seriesDescription": "S\u00e9rie DICOM",
+          "seriesDate": "20250910",
+          "seriesTime": "035322",
+          "modality": "CT",
+          "instances": [
+            {
+              "instanceNumber": 1,
+              "sopInstanceUID": "Instance.3.1",
+              "url": "/download/uploads/3/IMG2"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>👁️ Visionneuse DICOM OHIF</title>
+    <!-- OHIF Viewer via CDN -->
+    <link rel="stylesheet" href="https://unpkg.com/@ohif/viewer@4.12.3/dist/index.css">
+    <style>
+        body, html, #root {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        #back-link {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: #e74c3c;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            z-index: 1000;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        #back-link:hover {
+            background: #c0392b;
+        }
+        .patient-header {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            z-index: 1000;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <a href="/medecin" id="back-link">
+        ← Retour à la liste d'études
+    </a>
+    <div class="patient-header">
+        Patient: {{ exam.patient_nom }} {{ exam.patient_prenom }} (ID: {{ exam.patient_id_patient }})
+    </div>
+    <div id="root"></div>
+
+    <script src="https://unpkg.com/@ohif/viewer@4.12.3/dist/index.umd.js"></script>
+    <script>
+        window.OHIFViewer.installViewer(
+            {
+                routerBasename: '/',
+                extensions: [],
+                showStudyList: false,
+                filterQueryParam: false,
+                servers: {
+                    dicomWeb: [
+                        {
+                            name: 'DICOM Server',
+                            wadoUriRoot: '/download/',
+                            qidoRoot: '/download/',
+                            wadoRoot: '/download/',
+                            qidoSupportsIncludeField: false,
+                            imageRendering: 'wadouri',
+                            thumbnailRendering: 'wadouri',
+                            enableStudyLazyLoad: true,
+                        },
+                    ],
+                },
+                studyInstanceUids: '{{ study_instance_uid }}',
+            },
+            '#root',
+            {}
+        );
+    </script>
+</body>
+</html>

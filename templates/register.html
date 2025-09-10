@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Inscription</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h2>📝 Inscription</h2>
+        <form method="POST">
+            <input type="text" name="full_name" placeholder="Nom complet" required>
+            <input type="email" name="email" placeholder="Email" required>
+            <input type="password" name="password" placeholder="Mot de passe" required>
+            <select name="role" required>
+                <option value="">-- Sélectionnez un rôle --</option>
+                <option value="admin">Admin (Clinique)</option>
+                <option value="technicien">Technicien Scanner</option>
+                <option value="medecin">Médecin Radiologue</option>
+            </select>
+            <button type="submit">S'inscrire</button>
+        </form>
+    </div>
+</body>
+</html>

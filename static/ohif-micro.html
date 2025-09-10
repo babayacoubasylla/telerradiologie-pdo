@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>👁️ OHIF Micro Viewer — IMAIOS Style</title>
+    <script src="https://unpkg.com/@ohif/viewer@4.12.22/dist/index.umd.js" crossorigin></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        #root {
+            width: 100%;
+            height: 100vh;
+        }
+        .imaios-info {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(255,255,255,0.9);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            z-index: 9999;
+            max-width: 300px;
+        }
+        .imaios-info h4 {
+            margin: 0 0 10px 0;
+            color: #e65100;
+        }
+        .imaios-info ul {
+            padding-left: 20px;
+            margin: 0;
+        }
+        .imaios-info li {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="imaios-info">
+        <h4>ℹ️ IMAIOS-Style Viewer</h4>
+        <ul>
+            <li>✅ Aucune installation</li>
+            <li>✅ Tout se passe en local</li>
+            <li>✅ Confidentialité garantie</li>
+            <li>⚠️ Usage non médical</li>
+        </ul>
+    </div>
+    <div id="root"></div>
+    <script>
+        const containerId = 'root';
+        const componentRenderedOrUpdatedCallback = function() {
+            console.log('OHIF Viewer rendu avec succès');
+            
+            // ✅ Charge automatiquement la première étude
+            setTimeout(() => {
+                const studyList = document.querySelector('.study-list');
+                if (studyList) {
+                    const firstStudy = studyList.querySelector('.list-item');
+                    if (firstStudy) {
+                        firstStudy.click();
+                    }
+                }
+            }, 1000);
+        };
+
+        window.OHIFViewer.installViewer(
+            {
+                routerBasename: '/',
+                servers: {
+                    dicomWeb: [
+                        {
+                            name: 'Local DICOM',
+                            wadoUriRoot: '/',
+                            qidoRoot: '/',
+                            wadoRoot: '/',
+                            qidoSupportsIncludeField: false,
+                            imageRendering: 'wadouri',
+                            thumbnailRendering: 'wadouri',
+                            enableStudyLazyLoad: true,
+                        },
+                    ],
+                },
+                showStudyList: true, // ✅ Affiche la liste des études
+                filterQueryParam: false,
+                maxConcurrentMetadataRequests: 1,
+                disableServersCache: true,
+                studyPrefetcher: {
+                    enabled: true,
+                    order: 'closest',
+                    displaySetCount: 3,
+                    preventCache: false,
+                    prefetchDisplaySetsTimeout: 1000,
+                    maxNumPrefetchRequests: 1,
+                    displayProgress: false,
+                    includeActiveDisplaySet: true,
+                },
+            },
+            containerId,
+            componentRenderedOrUpdatedCallback
+        );
+    </script>
+</body>
+</html>

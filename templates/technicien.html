@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>📤 Upload Examen - Technicien</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #2c3e50; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        button { background: #3498db; color: white; padding: 12px 30px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        button:hover { background: #2980b9; }
+        .flash-messages { margin-bottom: 20px; }
+        .flash-messages .success { color: #27ae60; background: #e8f5e9; padding: 10px; border-radius: 5px; }
+        .flash-messages .error { color: #e74c3c; background: #fadbd8; padding: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>📄 Formulaire d'Upload</h2>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label>Nom du patient</label>
+                <input type="text" name="nom" required>
+            </div>
+            <div class="form-group">
+                <label>Prénom du patient</label>
+                <input type="text" name="prenom" required>
+            </div>
+            <div class="form-group">
+                <label>Âge</label>
+                <input type="number" name="age" required>
+            </div>
+            <div class="form-group">
+                <label>Diagnostic</label>
+                <textarea name="diagnostic" rows="3" required></textarea>
+            </div>
+            <div class="form-group">
+                <label>Examen demandé</label>
+                <textarea name="examen_demande" rows="3" required></textarea>
+            </div>
+            <div class="form-group">
+                <label>Médecin à qui attribuer</label>
+                <select name="medecin_id" required>
+                    <option value="">-- Sélectionner un médecin --</option>
+                    {% for medecin in medecins %}
+                        <option value="{{ medecin[0] }}">{{ medecin[1] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Fichiers DICOM (Ctrl+A pour tout sélectionner)</label>
+                <input type="file" name="dicom_files" multiple required>
+            </div>
+            <button type="submit">📤 Upload et Attribuer</button>
+        </form>
+    </div>
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>🧑‍⚕️ Tableau de bord Médecin</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #2c3e50; }
+        .welcome { background: #e8f4fc; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .logout-btn { background: #e74c3c; color: white; padding: 8px 15px; text-decoration: none; border-radius: 5px; float: right; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #3498db; color: white; }
+        .action-btn { background: #27ae60; color: white; padding: 8px 15px; text-decoration: none; border-radius: 5px; margin-right: 5px; }
+        .action-btn:hover { background: #229954; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🧑‍⚕️ Tableau de bord Médecin</h2>
+        <div class="welcome">
+            Bonjour, {{ session['full_name'] }}<br>
+            {{ session['user_email'] }}
+            <a href="/logout" class="logout-btn">🚪 Déconnexion</a>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div style="margin: 20px 0; padding: 15px; background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; border-radius: 5px;">
+                    {% for category, message in messages %}
+                        <p>{{ message }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <h3>📋 Examens attribués</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Patient</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for exam in exams %}
+                <tr>
+                    <td>{{ exam.patient_nom }} {{ exam.patient_prenom }} (ID: {{ exam.patient_id_patient }})</td>
+                    <td>{{ exam.uploaded_at }}</td>
+                    <td>{{ exam.status }}</td>
+                    <td>
+                        <a href="/visualiser/{{ exam.id }}" class="action-btn">👁️ Visualiser les images</a>
+                        <a href="/rapport/{{ exam.id }}" class="action-btn">📝 Rédiger le rapport</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
