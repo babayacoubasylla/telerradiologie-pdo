@@ -7,7 +7,7 @@
     <!-- OHIF Viewer via CDN -->
     <link rel="stylesheet" href="https://unpkg.com/@ohif/viewer@4.12.3/dist/index.css">
     <style>
-        body, html, #root {
+        body, html, #ohif-root {
             width: 100%;
             height: 100%;
             margin: 0;
@@ -53,7 +53,7 @@
     <div class="patient-header">
         Patient: {{ exam.patient_nom }} {{ exam.patient_prenom }} (ID: {{ exam.patient_id_patient }})
     </div>
-    <div id="root"></div>
+    <div id="ohif-root"></div>
 
     <script src="https://unpkg.com/@ohif/viewer@4.12.3/dist/index.umd.js"></script>
     <script>
@@ -79,7 +79,7 @@
                 },
                 studyInstanceUids: '{{ study_instance_uid }}',
             },
-            '#root',
+            '#ohif-root',  // ✅ Correct ID — correspond à <div id="ohif-root">
             {}
         );
     </script>
