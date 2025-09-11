@@ -251,7 +251,7 @@ def download_file(filepath):
         return "Fichier non trouvé", 404
     return send_from_directory(os.path.dirname(full_path), os.path.basename(full_path), mimetype='application/dicom')
 
-# ✅ Route pour visualiser — Génère un .bat avec encodage Windows
+# ✅ Route pour visualiser — OHIF Viewer intégré
 @app.route('/visualiser/<int:exam_id>')
 def visualiser(exam_id):
     if session.get('role') != 'medecin':
@@ -268,119 +268,64 @@ def visualiser(exam_id):
         WHERE e.id = ? AND e.medecin_id = ?
     """, (exam_id, session['user_id']))
     exam = c.fetchone()
+    conn.close()
     
     if not exam:
         flash('❌ Examen non trouvé ou non attribué', 'error')
         return redirect('/medecin')
     
-    # Mettre à jour visualized_at
-    c.execute("UPDATE exams SET visualized_at = ? WHERE id = ?", (datetime.now().isoformat(), exam_id))
-    conn.commit()
-    conn.close()
-    
+    # Génère le manifeste OHIF
+    dicom_paths = []
     if exam['dicom_path']:
         dicom_paths = exam['dicom_path'].split(',')
-        valid_paths = [p for p in dicom_paths if os.path.exists(p)]
-        
-        if not valid_paths:
-            flash('❌ Aucun fichier DICOM trouvé', 'error')
-            return redirect('/medecin')
-        
-        # URL publique de ton app déployée
-        base_url = "https://telerradiologie-pdo.onrender.com"
-        
-        # Créer un fichier .bat avec encodage Windows
-        bat_content = f"""@echo off
-chcp 1252 > nul
-echo.
-echo ========================================
-echo 🚀 Démarrage du script de visualisation
-echo ========================================
-echo.
-
-echo ✅ Création du dossier temporaire...
-mkdir "C:\\temp\\exam_{exam_id}" 2>nul
-
-echo.
-echo ========================================
-echo 🔽 Téléchargement des fichiers DICOM
-echo ========================================
-echo.
-
-"""
-        for i, path in enumerate(valid_paths):
-            filename = os.path.basename(path)
-            download_url = f"{base_url}/download/{urllib.parse.quote(path.replace('\\\\', '/'))}"
-            bat_content += f'echo Téléchargement de {filename}...\n'
-            bat_content += f'powershell -Command "Invoke-WebRequest \'{download_url}\' -OutFile \'C:\\temp\\exam_{exam_id}\\{filename}\'"\n'
-            bat_content += f'if errorlevel 1 (\n'
-            bat_content += f'    echo ❌ Échec du téléchargement de {filename}\n'
-            bat_content += f'    pause\n'
-            bat_content += f'    exit /b 1\n'
-            bat_content += f') else (\n'
-            bat_content += f'    echo ✅ {filename} téléchargé\n'
-            bat_content += f')\n'
-            bat_content += f'echo.\n'
-        
-        bat_content += f'''
-echo.
-echo ========================================
-echo 🔍 Recherche de RadiAnt
-echo ========================================
-echo.
-
-set "radiant_path="
-
-if exist "C:\\Program Files\\RadiAntViewer64bit\\RadiAntViewer.exe" (
-    set "radiant_path=C:\\Program Files\\RadiAntViewer64bit\\RadiAntViewer.exe"
-    echo ✅ RadiAnt trouvé dans Program Files
-)
-
-if exist "C:\\Program Files (x86)\\RadiAnt DICOM Viewer\\RadiAntViewer.exe" (
-    set "radiant_path=C:\\Program Files (x86)\\RadiAnt DICOM Viewer\\RadiAntViewer.exe"
-    echo ✅ RadiAnt trouvé dans Program Files (x86)
-)
-
-if exist "C:\\RadiAnt\\RadiAntViewer.exe" (
-    set "radiant_path=C:\\RadiAnt\\RadiAntViewer.exe"
-    echo ✅ RadiAnt trouvé dans C:\\RadiAnt
-)
-
-if defined radiant_path (
-    echo.
-    echo ========================================
-    echo 🎉 Lancement de RadiAnt
-    echo ========================================
-    echo.
-    echo Ouvrir : %radiant_path%
-    "%radiant_path%" "C:\\temp\\exam_{exam_id}"
-    if errorlevel 1 (
-        echo ❌ Échec du lancement de RadiAnt
-        pause
-    ) else (
-        echo ✅ RadiAnt lancé avec succès
-    )
-) else (
-    echo.
-    echo ========================================
-    echo ❌ ERREUR : RadiAnt introuvable
-    echo ========================================
-    echo.
-    echo Veuillez installer RadiAnt depuis :
-    echo https://www.radiantviewer.com/
-    echo.
-    pause
-)
-'''
-        
-        # ✅ Forcer l'encodage Windows
-        response = make_response(bat_content.encode('cp1252'))
-        response.headers['Content-Type'] = 'text/plain; charset=cp1252'
-        response.headers['Content-Disposition'] = f'attachment; filename=visualiser_exam_{exam_id}.bat'
-        return response
     
-    flash('❌ Aucun fichier DICOM associé', 'error')
-    return redirect('/medecin')
+    studies = []
+    if dicom_paths:
+        study_instance_uid = f"Study.{exam_id}"
+        series_instance_uid = f"Series.{exam_id}.1"
+        
+        series = {
+            "seriesInstanceUID": series_instance_uid,
+            "seriesDescription": "Série DICOM",
+            "seriesDate": datetime.now().strftime("%Y%m%d"),
+            "seriesTime": datetime.now().strftime("%H%M%S"),
+            "modality": "CT",
+            "instances": []
+        }
+        
+        for i, path in enumerate(dicom_paths):
+            if os.path.exists(path):
+                path = path.replace('\\', '/')
+                encoded_path = urllib.parse.quote(path)
+                url = f"/download/{encoded_path}"
+                series["instances"].append({
+                    "instanceNumber": i + 1,
+                    "sopInstanceUID": f"Instance.{exam_id}.{i+1}",
+                    "url": url
+                })
+        
+        studies = [{
+            "studyInstanceUID": study_instance_uid,
+            "studyDescription": f"Examen #{exam_id} - {exam['patient_nom']} {exam['patient_prenom']}",
+            "studyDate": datetime.now().strftime("%Y%m%d"),
+            "studyTime": datetime.now().strftime("%H%M%S"),
+            "patientName": f"{exam['patient_nom']}^{exam['patient_prenom']}",
+            "patientId": exam['patient_id_patient'],
+            "seriesList": [series]
+        }]
+    
+    manifest = {
+        "studies": studies
+    }
+    
+    manifest_filename = f"manifest_{exam_id}.json"
+    manifest_path = os.path.join('static', manifest_filename)
+    with open(manifest_path, 'w', encoding='utf-8') as f:
+        json.dump(manifest, f, indent=2)
+    
+    return render_template('visualiser.html', 
+                           exam=exam, 
+                           study_instance_uid=study_instance_uid)
 
 # Route pour rédiger le rapport
 @app.route('/rapport/<int:exam_id>', methods=['GET', 'POST'])
