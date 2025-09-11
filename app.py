@@ -251,7 +251,7 @@ def download_file(filepath):
         return "Fichier non trouvé", 404
     return send_from_directory(os.path.dirname(full_path), os.path.basename(full_path), mimetype='application/dicom')
 
-# ✅ Route pour visualiser — Génère un .bat avec logs détaillés
+# ✅ Route pour visualiser — Génère un .bat avec encodage Windows
 @app.route('/visualiser/<int:exam_id>')
 def visualiser(exam_id):
     if session.get('role') != 'medecin':
@@ -289,8 +289,9 @@ def visualiser(exam_id):
         # URL publique de ton app déployée
         base_url = "https://telerradiologie-pdo.onrender.com"
         
-        # Créer un fichier .bat avec affichage détaillé
-        bat_content = f"""@echo on
+        # Créer un fichier .bat avec encodage Windows
+        bat_content = f"""@echo off
+chcp 1252 > nul
 echo.
 echo ========================================
 echo 🚀 Démarrage du script de visualisation
@@ -372,9 +373,9 @@ if defined radiant_path (
 )
 '''
         
-        # Envoyer le fichier .bat
-        response = make_response(bat_content)
-        response.headers['Content-Type'] = 'text/plain'
+        # ✅ Forcer l'encodage Windows
+        response = make_response(bat_content.encode('cp1252'))
+        response.headers['Content-Type'] = 'text/plain; charset=cp1252'
         response.headers['Content-Disposition'] = f'attachment; filename=visualiser_exam_{exam_id}.bat'
         return response
     
