@@ -251,7 +251,7 @@ def download_file(filepath):
         return "Fichier non trouvé", 404
     return send_from_directory(os.path.dirname(full_path), os.path.basename(full_path), mimetype='application/dicom')
 
-# ✅ Route pour visualiser — Génère un .bat intelligent avec PowerShell
+# ✅ Route pour visualiser — Génère un .bat avec logs détaillés
 @app.route('/visualiser/<int:exam_id>')
 def visualiser(exam_id):
     if session.get('role') != 'medecin':
@@ -289,40 +289,85 @@ def visualiser(exam_id):
         # URL publique de ton app déployée
         base_url = "https://telerradiologie-pdo.onrender.com"
         
-        # Créer un fichier .bat intelligent avec PowerShell
-        bat_content = f"""@echo off
-echo Téléchargement des images DICOM pour l'examen {exam_id}...
+        # Créer un fichier .bat avec affichage détaillé
+        bat_content = f"""@echo on
+echo.
+echo ========================================
+echo 🚀 Démarrage du script de visualisation
+echo ========================================
+echo.
+
+echo ✅ Création du dossier temporaire...
 mkdir "C:\\temp\\exam_{exam_id}" 2>nul
+
+echo.
+echo ========================================
+echo 🔽 Téléchargement des fichiers DICOM
+echo ========================================
+echo.
 
 """
         for i, path in enumerate(valid_paths):
             filename = os.path.basename(path)
             download_url = f"{base_url}/download/{urllib.parse.quote(path.replace('\\\\', '/'))}"
-            # Utilise PowerShell pour télécharger
+            bat_content += f'echo Téléchargement de {filename}...\n'
             bat_content += f'powershell -Command "Invoke-WebRequest \'{download_url}\' -OutFile \'C:\\temp\\exam_{exam_id}\\{filename}\'"\n'
+            bat_content += f'if errorlevel 1 (\n'
+            bat_content += f'    echo ❌ Échec du téléchargement de {filename}\n'
+            bat_content += f'    pause\n'
+            bat_content += f'    exit /b 1\n'
+            bat_content += f') else (\n'
+            bat_content += f'    echo ✅ {filename} téléchargé\n'
+            bat_content += f')\n'
+            bat_content += f'echo.\n'
         
-        # Cherche RadiAnt dans les dossiers les plus courants
         bat_content += f'''
-echo Recherche de RadiAnt...
+echo.
+echo ========================================
+echo 🔍 Recherche de RadiAnt
+echo ========================================
+echo.
+
 set "radiant_path="
 
 if exist "C:\\Program Files\\RadiAntViewer64bit\\RadiAntViewer.exe" (
     set "radiant_path=C:\\Program Files\\RadiAntViewer64bit\\RadiAntViewer.exe"
+    echo ✅ RadiAnt trouvé dans Program Files
 )
 
 if exist "C:\\Program Files (x86)\\RadiAnt DICOM Viewer\\RadiAntViewer.exe" (
     set "radiant_path=C:\\Program Files (x86)\\RadiAnt DICOM Viewer\\RadiAntViewer.exe"
+    echo ✅ RadiAnt trouvé dans Program Files (x86)
 )
 
 if exist "C:\\RadiAnt\\RadiAntViewer.exe" (
     set "radiant_path=C:\\RadiAnt\\RadiAntViewer.exe"
+    echo ✅ RadiAnt trouvé dans C:\\RadiAnt
 )
 
 if defined radiant_path (
-    echo RadiAnt trouvé : %radiant_path%
+    echo.
+    echo ========================================
+    echo 🎉 Lancement de RadiAnt
+    echo ========================================
+    echo.
+    echo Ouvrir : %radiant_path%
     "%radiant_path%" "C:\\temp\\exam_{exam_id}"
+    if errorlevel 1 (
+        echo ❌ Échec du lancement de RadiAnt
+        pause
+    ) else (
+        echo ✅ RadiAnt lancé avec succès
+    )
 ) else (
-    echo ❌ RadiAnt introuvable. Veuillez l'installer depuis : https://www.radiantviewer.com/
+    echo.
+    echo ========================================
+    echo ❌ ERREUR : RadiAnt introuvable
+    echo ========================================
+    echo.
+    echo Veuillez installer RadiAnt depuis :
+    echo https://www.radiantviewer.com/
+    echo.
     pause
 )
 '''
