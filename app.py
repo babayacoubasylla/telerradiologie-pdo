@@ -251,7 +251,7 @@ def download_file(filepath):
         return "Fichier non trouvé", 404
     return send_from_directory(os.path.dirname(full_path), os.path.basename(full_path), mimetype='application/dicom')
 
-# ✅ Route pour visualiser — OHIF Viewer intégré
+# ✅ Route pour visualiser — Cornerstone.js intégré
 @app.route('/visualiser/<int:exam_id>')
 def visualiser(exam_id):
     if session.get('role') != 'medecin':
@@ -274,58 +274,20 @@ def visualiser(exam_id):
         flash('❌ Examen non trouvé ou non attribué', 'error')
         return redirect('/medecin')
     
-    # Génère le manifeste OHIF
-    dicom_paths = []
+    # Liste des fichiers DICOM
+    dicom_files = []
     if exam['dicom_path']:
         dicom_paths = exam['dicom_path'].split(',')
-    
-    studies = []
-    if dicom_paths:
-        study_instance_uid = f"Study.{exam_id}"
-        series_instance_uid = f"Series.{exam_id}.1"
-        
-        series = {
-            "seriesInstanceUID": series_instance_uid,
-            "seriesDescription": "Série DICOM",
-            "seriesDate": datetime.now().strftime("%Y%m%d"),
-            "seriesTime": datetime.now().strftime("%H%M%S"),
-            "modality": "CT",
-            "instances": []
-        }
-        
-        for i, path in enumerate(dicom_paths):
+        for path in dicom_paths:
             if os.path.exists(path):
-                path = path.replace('\\', '/')
-                encoded_path = urllib.parse.quote(path)
-                url = f"/download/{encoded_path}"
-                series["instances"].append({
-                    "instanceNumber": i + 1,
-                    "sopInstanceUID": f"Instance.{exam_id}.{i+1}",
-                    "url": url
+                filename = os.path.basename(path)
+                url = f"/download/{urllib.parse.quote(path.replace('\\\\', '/'))}"
+                dicom_files.append({
+                    'filename': filename,
+                    'url': url
                 })
-        
-        studies = [{
-            "studyInstanceUID": study_instance_uid,
-            "studyDescription": f"Examen #{exam_id} - {exam['patient_nom']} {exam['patient_prenom']}",
-            "studyDate": datetime.now().strftime("%Y%m%d"),
-            "studyTime": datetime.now().strftime("%H%M%S"),
-            "patientName": f"{exam['patient_nom']}^{exam['patient_prenom']}",
-            "patientId": exam['patient_id_patient'],
-            "seriesList": [series]
-        }]
     
-    manifest = {
-        "studies": studies
-    }
-    
-    manifest_filename = f"manifest_{exam_id}.json"
-    manifest_path = os.path.join('static', manifest_filename)
-    with open(manifest_path, 'w', encoding='utf-8') as f:
-        json.dump(manifest, f, indent=2)
-    
-    return render_template('visualiser.html', 
-                           exam=exam, 
-                           study_instance_uid=study_instance_uid)
+    return render_template('visualiser.html', exam=exam, dicom_files=dicom_files)
 
 # Route pour rédiger le rapport
 @app.route('/rapport/<int:exam_id>', methods=['GET', 'POST'])
