@@ -10,7 +10,6 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.section import WD_ORIENT
 import urllib.parse
 import json
-import subprocess
 
 app = Flask(__name__)
 app.secret_key = 'super_secret_key_pour_session'
@@ -72,7 +71,7 @@ def init_db():
 
 init_db()
 
-# ✅ Créer les comptes par défaut — TOUS LES COMPTES QUE TU AS DONNÉS
+# ✅ Créer les comptes par défaut
 def create_default_users():
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
@@ -80,7 +79,7 @@ def create_default_users():
     users = [
         ("admin@pdo.ci", "admin123", "Admin PDO", "admin"),
         ("drcamara@pdo.ci", "med123", "Dr Camara", "medecin"),
-        ("drfrancistraore@pdo.ci", "med123", "Dr Francis Traore", "medecin"),  # ✅ Ajouté
+        ("drfrancistraore@pdo.ci", "med123", "Dr Francis Traore", "medecin"),
         ("agent@pdo.ci", "agent123", "Agent Tireur", "agent_tireur"),
         ("tuocyrille@pdo.ci", "tech123", "Technicien Cyrille", "technicien"),
         ("ayemou@pdo.ci", "tech123", "Technicien Ayemou", "technicien"),
@@ -93,7 +92,7 @@ def create_default_users():
             c.execute("INSERT INTO users (email, password, full_name, role) VALUES (?, ?, ?, ?)",
                       (email, hashed_pw, full_name, role))
         except sqlite3.IntegrityError:
-            pass  # Ignore si déjà existant
+            pass
     
     conn.commit()
     conn.close()
@@ -252,7 +251,7 @@ def download_file(filepath):
         return "Fichier non trouvé", 404
     return send_from_directory(os.path.dirname(full_path), os.path.basename(full_path), mimetype='application/dicom')
 
-# ✅ Route pour visualiser — OUVRIR RadiAnt DIRECTEMENT
+# ✅ Route pour visualiser — Génère un .bat intelligent
 @app.route('/visualiser/<int:exam_id>')
 def visualiser(exam_id):
     if session.get('role') != 'medecin':
@@ -280,26 +279,60 @@ def visualiser(exam_id):
     conn.close()
     
     if exam['dicom_path']:
-        first_file = exam['dicom_path'].split(',')[0]
-        folder_path = os.path.dirname(first_file)
+        dicom_paths = exam['dicom_path'].split(',')
+        valid_paths = [p for p in dicom_paths if os.path.exists(p)]
         
-        if os.path.exists(folder_path):
-            radiant_path = r"C:\Program Files\RadiAntViewer64bit\RadiAntViewer.exe"
-            
-            if not os.path.exists(radiant_path):
-                flash(f'❌ RadiAnt introuvable. Installez-le sur ce PC.', 'error')
-                return redirect('/medecin')
-            
-            try:
-                subprocess.run([radiant_path, folder_path], shell=True)
-                flash('✅ RadiAnt lancé avec les images.', 'success')
-            except Exception as e:
-                flash(f'❌ Erreur : {str(e)}', 'error')
-        else:
-            flash('❌ Dossier DICOM introuvable', 'error')
-    else:
-        flash('❌ Aucun fichier DICOM associé', 'error')
+        if not valid_paths:
+            flash('❌ Aucun fichier DICOM trouvé', 'error')
+            return redirect('/medecin')
+        
+        # URL publique de ton app déployée
+        base_url = "https://telerradiologie-pdo.onrender.com"
+        
+        # Créer un fichier .bat intelligent
+        bat_content = f"""@echo off
+echo Téléchargement des images DICOM pour l'examen {exam_id}...
+mkdir "C:\\temp\\exam_{exam_id}" 2>nul
+
+"""
+        for i, path in enumerate(valid_paths):
+            filename = os.path.basename(path)
+            download_url = f"{base_url}/download/{urllib.parse.quote(path.replace('\\\\', '/'))}"
+            bat_content += f'curl -o "C:\\temp\\exam_{exam_id}\\{filename}" "{download_url}"\n'
+        
+        # Cherche RadiAnt dans les dossiers les plus courants
+        bat_content += f'''
+echo Recherche de RadiAnt...
+set "radiant_path="
+
+if exist "C:\\Program Files\\RadiAntViewer64bit\\RadiAntViewer.exe" (
+    set "radiant_path=C:\\Program Files\\RadiAntViewer64bit\\RadiAntViewer.exe"
+)
+
+if exist "C:\\Program Files (x86)\\RadiAnt DICOM Viewer\\RadiAntViewer.exe" (
+    set "radiant_path=C:\\Program Files (x86)\\RadiAnt DICOM Viewer\\RadiAntViewer.exe"
+)
+
+if exist "C:\\RadiAnt\\RadiAntViewer.exe" (
+    set "radiant_path=C:\\RadiAnt\\RadiAntViewer.exe"
+)
+
+if defined radiant_path (
+    echo RadiAnt trouvé : %radiant_path%
+    "%radiant_path%" "C:\\temp\\exam_{exam_id}"
+) else (
+    echo ❌ RadiAnt introuvable. Veuillez l'installer depuis : https://www.radiantviewer.com/
+    pause
+)
+'''
+        
+        # Envoyer le fichier .bat
+        response = make_response(bat_content)
+        response.headers['Content-Type'] = 'text/plain'
+        response.headers['Content-Disposition'] = f'attachment; filename=visualiser_exam_{exam_id}.bat'
+        return response
     
+    flash('❌ Aucun fichier DICOM associé', 'error')
     return redirect('/medecin')
 
 # Route pour rédiger le rapport
@@ -492,6 +525,25 @@ def clinique():
             c.execute("DELETE FROM users WHERE id = ? AND role != 'admin'", (user_id,))
             conn.commit()
             flash('✅ Compte supprimé !', 'success')
+        
+        elif action == 'delete_exam':
+            exam_id = request.form['exam_id']
+            # Supprimer les fichiers DICOM
+            c.execute("SELECT dicom_path FROM exams WHERE id = ?", (exam_id,))
+            exam = c.fetchone()
+            if exam and exam['dicom_path']:
+                for path in exam['dicom_path'].split(','):
+                    if os.path.exists(path):
+                        os.remove(path)
+                # Supprimer le dossier parent s'il est vide
+                if exam['dicom_path']:
+                    folder = os.path.dirname(exam['dicom_path'].split(',')[0])
+                    if os.path.exists(folder) and not os.listdir(folder):
+                        os.rmdir(folder)
+            # Supprimer l'examen de la base
+            c.execute("DELETE FROM exams WHERE id = ?", (exam_id,))
+            conn.commit()
+            flash('✅ Examen supprimé !', 'success')
     
     # Récupérer tous les utilisateurs
     c.execute("SELECT * FROM users ORDER BY role, full_name")
@@ -526,5 +578,5 @@ def clinique():
     return render_template('clinique.html', exams=exams, users=users)
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 10000))  # Render utilise le port 10000
+    port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port, debug=False)

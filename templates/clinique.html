@@ -112,9 +112,9 @@
                     <th>Patient</th>
                     <th>Technicien</th>
                     <th>Médecin</th>
-                    <th>Agent Tireur</th>
                     <th>Date Upload</th>
                     <th>Status</th>
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -123,9 +123,15 @@
                     <td>{{ exam.patient_nom }} {{ exam.patient_prenom }} (ID: {{ exam.patient_id_patient }})</td>
                     <td>{{ exam.technicien_full_name or 'Non attribué' }}</td>
                     <td>{{ exam.medecin_full_name or 'Non attribué' }}</td>
-                    <td>{{ exam.agent_tireur_full_name or 'Non attribué' }}</td>
                     <td>{{ exam.uploaded_at }}</td>
                     <td>{{ exam.status }}</td>
+                    <td>
+                        <form method="POST" style="display: inline;">
+                            <input type="hidden" name="action" value="delete_exam">
+                            <input type="hidden" name="exam_id" value="{{ exam.id }}">
+                            <button type="submit" class="delete-btn" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cet examen et ses fichiers ?')">🗑️ Supprimer</button>
+                        </form>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
