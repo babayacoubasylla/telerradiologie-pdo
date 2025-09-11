@@ -251,7 +251,7 @@ def download_file(filepath):
         return "Fichier non trouvé", 404
     return send_from_directory(os.path.dirname(full_path), os.path.basename(full_path), mimetype='application/dicom')
 
-# ✅ Route pour visualiser — Génère un .bat intelligent
+# ✅ Route pour visualiser — Génère un .bat intelligent avec PowerShell
 @app.route('/visualiser/<int:exam_id>')
 def visualiser(exam_id):
     if session.get('role') != 'medecin':
@@ -289,7 +289,7 @@ def visualiser(exam_id):
         # URL publique de ton app déployée
         base_url = "https://telerradiologie-pdo.onrender.com"
         
-        # Créer un fichier .bat intelligent
+        # Créer un fichier .bat intelligent avec PowerShell
         bat_content = f"""@echo off
 echo Téléchargement des images DICOM pour l'examen {exam_id}...
 mkdir "C:\\temp\\exam_{exam_id}" 2>nul
@@ -298,7 +298,8 @@ mkdir "C:\\temp\\exam_{exam_id}" 2>nul
         for i, path in enumerate(valid_paths):
             filename = os.path.basename(path)
             download_url = f"{base_url}/download/{urllib.parse.quote(path.replace('\\\\', '/'))}"
-            bat_content += f'curl -o "C:\\temp\\exam_{exam_id}\\{filename}" "{download_url}"\n'
+            # Utilise PowerShell pour télécharger
+            bat_content += f'powershell -Command "Invoke-WebRequest \'{download_url}\' -OutFile \'C:\\temp\\exam_{exam_id}\\{filename}\'"\n'
         
         # Cherche RadiAnt dans les dossiers les plus courants
         bat_content += f'''
